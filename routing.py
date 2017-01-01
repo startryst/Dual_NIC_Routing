@@ -28,9 +28,18 @@ def add_mask(ip_raw_list):
 def add_routing(route_list, gateway):
     try:
         count = 0
+        skipped = 0
         for i in route_list:
-            subprocess.check_output(['route', 'add', i, gateway])
-            count += 1
+            output = subprocess.check_output(['route', 'add', i, gateway], stderr=subprocess.STDOUT)
+            if 'File exists' in output.decode():
+                skipped += 1
+                print("SKIPPED: {}".format(i))
+                pass
+            else:
+                print('add net', i, 'gateway', gateway)
+                count += 1
+        print('\n' * 2)
+        print("{} routes skipped due to EXIST in your routing table".format(skipped))
         print("{} routes have been successful injected".format(count))
     except:
         print("Error")
@@ -39,9 +48,18 @@ def add_routing(route_list, gateway):
 def del_routing(route_list):
     try:
         count = 0
+        skipped = 0
         for i in route_list:
-            subprocess.check_output(['route', 'delete', i])
-            count += 1
+            output = subprocess.check_output(['route', 'delete', i], stderr=subprocess.STDOUT)
+            if 'not in table' in output.decode():
+                skipped += 1
+                print("SKIPPED: {}".format(i))
+                pass
+            else:
+                print('del net', i)
+                count += 1
+        print('\n' * 2)
+        print("{} routes skipped due to NOT in your routing table".format(skipped))
         print("{} routes have been successful deleted".format(count))
     except:
         print("Error")
@@ -49,12 +67,15 @@ def del_routing(route_list):
 
 def main():
     url = 'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
-    gateway = '10.0.2.1'
+    latest_list = add_mask(get_ip_list(url))
+    print("\n{} routes have been loaded from below url:".format(len(latest_list)))
+    print(url,'\n')
+    gateway = input("Please enter the gateway IP address to be routed to China: ")
     choice = input("Do you want to add[A] routes or delete[D] them?: ")
     if choice.lower() == 'a':
-        add_routing(add_mask(get_ip_list(url)), gateway)
+        add_routing(latest_list, gateway)
     else:
-        del_routing(add_mask(get_ip_list(url)))
+        del_routing(latest_list)
 
 
 if __name__ == '__main__':
